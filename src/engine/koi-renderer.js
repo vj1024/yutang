@@ -2,6 +2,8 @@ import {clamp} from './simulation.js';
 import {koiBodyPoint,koiTailAngle,koiPectoralPose} from './koi-motion.js';
 import {drawFreeformFish} from './freeform-fish.js';
 const TAU = Math.PI * 2;
+// One tiny light ramp per document, reused by every fish and every frame.
+const lightTextures = new WeakMap();
 const smoothPath = (ctx, points, close = true) => {
   if (!points.length) return;
   ctx.beginPath();
@@ -67,24 +69,12 @@ export class KoiRenderer {
     }
     this.drawFins(fish, palette);
     this.bodyPath(fish);
-    const gradient = ctx.createLinearGradient(0, -fish.length * 0.16, 0, fish.length * 0.15);
-    gradient.addColorStop(0, palette.side);
-    gradient.addColorStop(0.25, palette.base);
-    gradient.addColorStop(0.47, palette.light);
-    gradient.addColorStop(0.71, palette.base);
-    gradient.addColorStop(1, palette.side);
-    ctx.fillStyle = gradient; ctx.fill();
-    ctx.save(); this.bodyPath(fish); ctx.clip();
+    ctx.fillStyle = palette.base; ctx.fill();
+    ctx.save(); ctx.clip();
     if (skin) this.drawSkin(fish, skin.surface);
     else this.drawPattern(fish, palette);
     if (this.options.quality !== 'low') this.drawScales(fish, palette);
-    // A soft dorsal sheen gives every fish a rounded body in the water.
-    const sheen = ctx.createLinearGradient(0, -fish.length * 0.12, 0, fish.length * 0.12);
-    sheen.addColorStop(0, 'rgba(7,35,28,.43)');
-    sheen.addColorStop(0.43, 'rgba(255,255,235,.23)');
-    sheen.addColorStop(0.59, 'rgba(255,255,235,.06)');
-    sheen.addColorStop(1, 'rgba(5,35,27,.45)');
-    ctx.fillStyle = sheen; ctx.fillRect(-fish.length, -fish.length, fish.length * 2, fish.length * 2);
+    this.drawBodyLight(fish);
     ctx.restore();
     this.drawHead(fish, palette);
     ctx.restore();
@@ -96,7 +86,7 @@ export class KoiRenderer {
     const tail = {x:0,y:0};
     ctx.save(); ctx.translate(root.x,root.y); ctx.rotate(koiTailAngle(fish));
     // Flexible fin tips follow the tail stalk a fraction of a stroke later.
-    const wag = Math.sin(fish.phase - 4.65) * l * (fish.swimAmplitude ?? .072) * .7;
+    const wag = Math.sin(fish.phase - 4.25) * l * (fish.swimAmplitude ?? .072) * .35;
     const finGradient = ctx.createLinearGradient(tail.x, tail.y, tail.x - l * 0.27, tail.y);
     finGradient.addColorStop(0, palette.base);
     finGradient.addColorStop(0.65, palette.fin + 'bf');
@@ -182,18 +172,51 @@ export class KoiRenderer {
     const ctx = this.ctx, l = fish.length;
     ctx.lineWidth = 0.34;
     ctx.strokeStyle = fish.variant === 3 ? 'rgba(113,98,40,.25)' : 'rgba(76,89,66,.12)';
+    // Batch identical scale strokes; avoid 50 separate GPU submissions per fish.
+    ctx.beginPath();
     for (let row = -2; row <= 2; row++) {
       for (let column = 2; column < 12; column++) {
         const u = column / 15 + (Math.abs(row) % 2) * 0.026;
         const p = this.bodyPoint(fish, u);
         const across = row * l * .035;
-        ctx.beginPath(); ctx.ellipse(p.x+p.nx*across, p.y+p.ny*across, l * 0.023, l * 0.025, p.angle, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
+        const x=p.x+p.nx*across,y=p.y+p.ny*across;
+        ctx.moveTo(x+Math.sin(p.angle)*l*.025,y-Math.cos(p.angle)*l*.025);
+        ctx.ellipse(x,y,l*.023,l*.025,p.angle,-Math.PI*.5,Math.PI*.5);
       }
     }
+    ctx.stroke();
     ctx.strokeStyle = 'rgba(255,254,216,.4)'; ctx.lineWidth = 0.6;
     ctx.beginPath();
     for(let i=0;i<=12;i++){const p=this.bodyPoint(fish,.30+i*.034);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y)}
     ctx.stroke();
+  }
+
+  drawBodyLight(fish) {
+    const owner=this.ctx.canvas?.ownerDocument;
+    // Non-DOM render targets can still draw the base body without this optional material.
+    if(!owner)return;
+    let texture=lightTextures.get(owner);
+    if(!texture){
+      texture=owner.createElement('canvas');texture.width=2;texture.height=64;
+      const ctx=texture.getContext('2d'),ramp=ctx.createLinearGradient(0,0,0,64);
+      ramp.addColorStop(0,'#454545');
+      ramp.addColorStop(.20,'#747474');
+      ramp.addColorStop(.44,'#b8b8b8');
+      ramp.addColorStop(.62,'#858585');
+      ramp.addColorStop(1,'#414141');
+      ctx.fillStyle=ramp;ctx.fillRect(0,0,2,64);lightTextures.set(owner,texture);
+    }
+    // Paint overlapping opaque sections into a small reusable surface, then apply
+    // the complete light map once. This avoids both alpha seams and curved gaps.
+    const buffer=this.bodyLightBuffer??=owner.createElement('canvas');
+    if(buffer.width!==256||buffer.height!==128){buffer.width=256;buffer.height=128;}
+    const ctx=buffer.getContext('2d'),scale=Math.min(256/(fish.length*.9),128/(fish.length*.9));
+    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,256,128);
+    ctx.setTransform(scale,0,0,scale,128,64);
+    this.drawSkin.call({ctx,options:this.options,bodyPoint:this.bodyPoint},fish,texture,this.options.quality==='low'?14:24);
+    this.ctx.save();this.ctx.globalCompositeOperation='soft-light';
+    this.ctx.drawImage(buffer,-128/scale,-64/scale,256/scale,128/scale);
+    this.ctx.restore();
   }
 
   drawHead(fish, palette) {
@@ -216,8 +239,8 @@ export class KoiRenderer {
     ctx.beginPath(); ctx.moveTo(l * 0.387, -l * 0.016); ctx.quadraticCurveTo(l * 0.368, 0, l * 0.387, l * 0.016); ctx.stroke();
   }
 
-  drawSkin(fish, surface) {
-    const ctx=this.ctx, strips=this.options.skinStrips || (this.options.quality==='low'?18:Math.min(112,Math.max(36,Math.ceil(fish.length*.5))));
+  drawSkin(fish, surface, sectionCount) {
+    const ctx=this.ctx, strips=sectionCount || this.options.skinStrips || (this.options.quality==='low'?18:Math.min(112,Math.max(36,Math.ceil(fish.length*.5))));
     // Follow each cross-section of the actual fish body, preserving the painted placement.
     for(let i=0;i<strips;i++){
       const u=(i+.5)/strips,p=this.bodyPoint(fish,u),dw=fish.length*.78/strips;

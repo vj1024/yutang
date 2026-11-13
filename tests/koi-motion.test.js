@@ -128,3 +128,52 @@ test('pectoral fins assist turning and reduced motion softens the swimming strok
   fish.turn = 1; const turning = [-1, 1].map(side => koiPectoralPose(fish, side).spread);
   assert.ok(turning[0] < relaxed[0] && turning[1] > relaxed[1]);
 });
+
+
+test('cruising keeps the shoulder steady while the flexible tail drives the stroke', () => {
+ const fish={...create().fish[0],length:100,swimAmplitude:.09,bodyBend:0};
+ let shoulder=0,tail=0;
+ for(let phase=0;phase<Math.PI*2;phase+=.02){fish.phase=phase;shoulder=Math.max(shoulder,Math.abs(painter.bodyPoint(fish,.75).angle));tail=Math.max(tail,Math.abs(painter.bodyPoint(fish,0).angle));}
+ assert.ok(shoulder<.045,'The fleshy shoulder should not wag as much as the tail stalk');
+ assert.ok(tail>shoulder*4,'Propulsion remains visible in the tail');
+});
+
+test('a slow tight turn avoids folding the tail stalk past a right angle', () => {
+ const fish={...create().fish[0],length:100,velocity:14,speed:20,turn:2,phase:0};
+ for(let i=0;i<180;i++)updateSwimMotion(fish,1/60,i/60,false);
+ let maximum=0;
+ for(let phase=0;phase<Math.PI*2;phase+=.02){fish.phase=phase;maximum=Math.max(maximum,Math.abs(painter.bodyPoint(fish,0).angle));}
+ assert.ok(maximum<1.1,'Steering and the swimming wave must not fold the rear body');
+});
+
+test('cruising eases speed into a sustained turn instead of sliding sideways', () => {
+ const straight=create(),turning=create();
+ for(const sim of [straight,turning])Object.assign(sim.fish[0],{x:700,y:500,heading:0,speed:20,velocity:20,targetX:1400,targetY:500,wander:100});
+ Object.assign(turning.fish[0],{targetX:700,targetY:900});
+ for(let i=0;i<30;i++){straight.update(1/60);turning.update(1/60);}
+ assert.ok(turning.fish[0].velocity<straight.fish[0].velocity*.98,'A turn should ease propulsion without stopping the fish');
+ assert.ok(turning.fish[0].velocity>straight.fish[0].velocity*.7);
+});
+
+
+test('body lighting follows the curved silhouette instead of filling a fixed rectangle', () => {
+ const rectangles=[];const ctx=new Proxy({}, {get:(o,k)=>o[k]??(k==='createLinearGradient'?()=>({addColorStop(){}}):k==='fillRect'? (...a)=>rectangles.push(a):()=>{}),set:(o,k,v)=>{o[k]=v;return true}});
+ const renderer=new KoiRenderer(ctx),fish={...create().fish[0],length:100,phase:2,bodyBend:.6};
+ renderer.drawFish(fish,false);
+ assert.equal(rectangles.length,0,'A fixed rectangular sheen drifts off the bent back');
+});
+
+
+test('rounded lighting maps each cross-section to the bent body tangent', () => {
+ const images=[],rotations=[],composed=[];let surfaces=0;const texture={width:2,height:64,getContext:()=>({createLinearGradient:()=>({addColorStop(){}}),fillRect(){}})};
+ const buffer={width:256,height:128,getContext:()=>({setTransform(){},clearRect(){},save(){},restore(){},translate(){},rotate:a=>rotations.push(a),drawImage:(...a)=>images.push(a)})};
+ const ctx={canvas:{ownerDocument:{createElement:()=>surfaces++===0?texture:buffer}},save(){},restore(){},drawImage:(...a)=>composed.push(a)};
+ const renderer=new KoiRenderer(ctx),fish={...create().fish[0],length:100,phase:2,bodyBend:.6};
+ renderer.drawBodyLight(fish);
+ assert.ok(images.length>=14&&images.length<=24,'A bounded set of cross-sections must carry continuous light');
+ assert.ok(rotations.some(a=>Math.abs(a)>.2),'Light must rotate with the bent rear body');
+ assert.ok(images.every(a=>a[0]===texture&&Number.isFinite(a.at(-1))&&a.at(-1)>0));
+ assert.equal(composed.length,1,'The complete rounded material must compose onto the fish only once');
+ assert.equal(composed[0][0],buffer);
+ assert.equal(ctx.globalCompositeOperation,'soft-light');
+});

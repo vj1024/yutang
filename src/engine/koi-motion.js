@@ -20,7 +20,7 @@ export function updateSwimMotion(fish, dt, time, reducedMotion) {
     dt * (1.35 + fish.velocity * .013) * (reducedMotion ? .6 : 1);
   // Curvature depends on distance travelled, not only on the rotation speed.
   // The rear body trails a turn, then gently straightens as steering releases.
-  const bend = clamp((fish.turn || 0) * fish.length * .4 / Math.max(14, fish.velocity, fish.speed * .6), -.9, .9);
+  const bend = clamp((fish.turn || 0) * fish.length * .4 / Math.max(14, fish.velocity, fish.speed * .6), -.62, .62);
   fish.bodyBend = (fish.bodyBend ?? 0) + (bend - (fish.bodyBend ?? 0)) * (1 - Math.exp(-dt * 3.8));
 }
 
@@ -36,7 +36,8 @@ function spine(fish) {
   Object.assign(pose, {phase,amplitude,bend,length:fish.length});
   const tangent = u => {
     const v=1-u, wave=phase-v*WAVE_DELAY;
-    const slope=amplitude*(v*v*Math.cos(wave)*WAVE_DELAY-2*v*Math.sin(wave));
+    // Koi propulsion is concentrated in the flexible rear third; the shoulder stays quiet.
+    const slope=amplitude*.82*(v*v*v*Math.cos(wave)*WAVE_DELAY-3*v*v*Math.sin(wave));
     return Math.atan2(slope,.78)-bend*v*v;
   };
   const ds=fish.length*.78/SEGMENTS;

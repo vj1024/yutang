@@ -248,7 +248,10 @@ export class PondSimulation {
       const easing = approach * approach * (3 - 2 * approach);
       const aligned = clamp(Math.cos(angleDelta(fish.heading, targetHeading)), 0, 1);
       const feedingSpeed = (1.05 + easing * 2.35) * (0.5 + aligned * 0.5);
-      const goalSpeed = fish.speed * seasonalSpeed * weatherSpeed * motionSpeed * (startled ? 1.8 : targetFood ? feedingSpeed : 1);
+      // Ease forward thrust through a turn rather than sliding a stiff body sideways.
+      // Only loading a turn reduces thrust; steady cruising recovers its normal speed.
+      const turnDrag = 1 - .24 * clamp((Math.abs(goalTurn) - Math.abs(previousTurn)) / maxTurnRate, 0, 1);
+      const goalSpeed = fish.speed * seasonalSpeed * weatherSpeed * motionSpeed * turnDrag * (startled ? 1.8 : targetFood ? feedingSpeed : 1);
       const response = fish.velocity > goalSpeed ? 5 : targetFood ? 4 : 1.7;
       fish.velocity += (goalSpeed - fish.velocity) * (1 - Math.exp(-dt * response));
       this.moveAnimal(fish, dt);
