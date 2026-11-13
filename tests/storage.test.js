@@ -55,6 +55,13 @@ test('unavailable browser storage falls back without throwing', (t) => {
 });
 
 const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB';
+test('a freehand silhouette keeps its rendering mode after a pond reload', t => {
+  localStore(t);
+  const fish = { id:'drawing', name:'月牙', texture:png, appearance:'freeform-v1', size:1.35 };
+  assert.equal(storage.writeStore('fusheng-fish', [fish]), true);
+  assert.deepEqual(storage.loadFish(), [fish]);
+});
+
 test('fish loaded from storage have safe text names, unique IDs and supported image data', (t) => {
   localStore(t, { 'fusheng-fish': JSON.stringify([
     { id: 'one', name: { crash: true }, texture: png },

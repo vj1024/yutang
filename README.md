@@ -53,9 +53,20 @@ pnpm desktop
 pnpm package:mac
 ```
 
+### 构建 Windows x64 安装程序
+
+在 Windows 上准备 Node.js 22.12 或更新的 LTS 版本及 pnpm，然后在项目根目录运行：
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm package:win
+```
+
+构建完成后，双击 `release\Yutang-Setup-<版本>-x64.exe` 即可安装。这个文件可直接分发，使用者无需安装 Node.js 或启动开发服务器。若要在构建机上直接试运行，打开 `release\win-unpacked\浮生锦鲤池.exe`，并保留同目录的资源文件。首次构建需要联网下载打包工具。
+
 声音需要首次点击以获得播放许可。存档保存在本机；不要清理浏览器站点数据或修改应用标识以免丢失已有存档。仓库不包含个人存档、依赖目录、构建缓存或编译安装包。素材许可与生成来源随相应素材目录提供，未将全部图片或配乐声明为 CC0。
 
-macOS 原生桌面层支持鼠标穿透、窗口层级与菜单栏控制；当前使用本地 ad-hoc 签名、未进行 Apple 公证。Windows / Linux 可运行网页，原生桌面穿透尚未实现。原稿与音频体积较大，首次下载需要一些时间。
+macOS 原生桌面层支持鼠标穿透、窗口层级与菜单栏控制；当前使用本地 ad-hoc 签名、未进行 Apple 公证。Windows 桌面版支持窗口、全屏和系统托盘；桌面图标下的鼠标穿透模式仅在 macOS 提供。Windows 和 Linux 也可运行网页版。原稿与音频体积较大，首次下载需要一些时间。
 
 ## 历史更新记录
 

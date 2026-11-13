@@ -17,6 +17,8 @@
 
 ## 构建与运行
 
+Windows x64 普通窗口版可用 `pnpm package:win` 构建。安装程序和免安装目录的用法见 [Windows 构建说明](../README.md#构建-windows-x64-安装程序)。
+
 原生桌面层面向 **macOS 12 或更新版本**；已验证的构建平台为 **Apple Silicon**。源码需要 Node.js 22.12 或更新的 LTS 版本、pnpm（本次维护环境为 11.19.0），以及 Xcode Command Line Tools。请在项目根目录执行：
 
 ```sh
@@ -42,10 +44,13 @@ electron-builder 应包含：
   "main": "electron/main.cjs",
   "build": {
     "files": ["dist/**/*", "electron/**/*.cjs", "package.json"],
-    "extraResources": [
-      { "from": "electron/native/bin", "to": "native", "filter": ["pond-window.node", "pond-pointer"] }
-    ],
-    "mac": { "target": "dir", "category": "public.app-category.entertainment" }
+    "mac": {
+      "target": "dir",
+      "category": "public.app-category.entertainment",
+      "extraResources": [
+        { "from": "electron/native/bin", "to": "native", "filter": ["pond-window.node", "pond-pointer"] }
+      ]
+    }
   }
 }
 ```

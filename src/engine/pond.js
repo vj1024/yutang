@@ -5,6 +5,7 @@ import {Scenery} from './scenery.js';
 import {Landscape} from './landscape.js';
 import {KoiRenderer} from './koi-renderer.js';
 import {prepareKoiSkin} from './koi-skin.js';
+import {prepareFreeformArt,freeformMouth} from './freeform-fish.js';
 import {TurtleRenderer} from './turtles.js';
 import {drawSurfaceRipples,drawShoreRipples} from './surface-waves.js';
 
@@ -133,19 +134,36 @@ export class PondEngine extends KoiRenderer {
     desktopMode: !!this.options.desktopMode, desktopSize: this.desktopSize, desktopBackgroundSize: this.desktopBackgroundSize, scenery: {rainDrops:this.atmosphere.drops.length, rainHits:this.atmosphere.rainHits, leaves:this.atmosphere.leaves.length, landings:this.atmosphere.landings, landscape:!!this.landscape.ready} }; }
   setCustomFish(items = []) {
     this.sim.setCustomFish(items);
-    const wanted = new Set(this.sim.customFish.map((item) => item.texture).filter(Boolean));
+    const wanted = new Map();
+    for (const {texture, appearance} of this.sim.customFish) {
+      if (!texture) continue;
+      if (!wanted.has(texture)) wanted.set(texture, new Set());
+      wanted.get(texture).add(appearance);
+    }
     for (const key of this.images.keys()) if (!wanted.has(key)) this.images.delete(key);
-    for (const texture of wanted) {
-      if (this.images.has(texture)) continue;
-      const img = new Image();
-      this.images.set(texture, img);
-      img.onload = () => {
-        if (this.destroyed) return;
-        const item = this.sim.customFish.find(f => f.texture === texture);
-        try { img.skin = prepareKoiSkin(img, item?.appearance); } catch { /* A damaged saved PNG keeps a native koi visible. */ }
-        this.render();
+    for (const [texture, appearances] of wanted) {
+      const prepare = img => {
+        if (this.destroyed || this.images.get(texture) !== img || !img.naturalWidth) return;
+        try {
+          if (appearances.has('freeform-v1')) {
+            img.freeform ??= prepareFreeformArt(img);
+            img.mouth ??= freeformMouth(img.freeform);
+            for (const fish of this.sim.fish) {
+              if (fish.custom?.texture === texture && fish.custom.appearance === 'freeform-v1') fish.drawnMouth = img.mouth;
+            }
+          }
+          const painted = [...appearances].filter(mode => mode !== 'freeform-v1');
+          if (painted.length) img.skin ??= prepareKoiSkin(img, painted[0]);
+        } catch { /* Ignore unreadable saved artwork. */ }
       };
-      img.src = texture;
+      let img = this.images.get(texture);
+      if (!img) {
+        img = new Image();
+        this.images.set(texture, img);
+        img.src = texture;
+      }
+      if (img.complete) prepare(img);
+      else img.onload = () => { prepare(img); if (!this.destroyed) this.render(); };
     }
     this.render();
   }

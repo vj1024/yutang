@@ -51,7 +51,7 @@ export function loadFish() {
     name: typeof fish.name === 'string' && fish.name.trim() ? fish.name.trim().slice(0, 12) : '无名锦鲤',
     texture: fish.texture,
     size: clampNumber(fish.size, .55, 1.8, 1),
-    appearance: fish.appearance === 'skin-v2' ? 'skin-v2' : 'legacy',
+    appearance: ['skin-v2', 'freeform-v1'].includes(fish.appearance) ? fish.appearance : 'legacy',
   }));
 }
 

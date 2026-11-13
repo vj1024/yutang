@@ -1,5 +1,6 @@
 import {clamp} from './simulation.js';
 import {koiBodyPoint,koiTailAngle,koiPectoralPose} from './koi-motion.js';
+import {drawFreeformFish} from './freeform-fish.js';
 const TAU = Math.PI * 2;
 const smoothPath = (ctx, points, close = true) => {
   if (!points.length) return;
@@ -53,6 +54,12 @@ export class KoiRenderer {
     ctx.rotate(fish.heading);
     ctx.scale(scale, scale);
     ctx.globalAlpha = shadow ? 0.22 : fish.depth * (this.options.night ? 0.82 : 0.98);
+    if (fish.custom?.appearance === 'freeform-v1') {
+      const art = this.images.get(fish.custom.texture)?.freeform;
+      if (art) drawFreeformFish(ctx, fish, art, shadow, this.options.quality);
+      ctx.restore();
+      return;
+    }
     if (shadow) {
       const stretch = fish.length / 86;
       ctx.drawImage(this.shadowSprite, -72 * stretch, -36 * stretch, 144 * stretch, 72 * stretch);

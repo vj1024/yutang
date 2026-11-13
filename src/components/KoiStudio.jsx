@@ -4,8 +4,9 @@ import {Panel} from './Panel.jsx';
 import {KoiRenderer} from '../engine/koi-renderer.js';
 import {SKIN_WIDTH,SKIN_HEIGHT,prepareKoiSkin} from '../engine/koi-skin.js';
 import {KoiPreview,TurtlePreview,paintKoiPreview,studioFish} from './CreaturePreview.jsx';
+import FreeformStudio from './FreeformStudio.jsx';
 const COLORS=['#ec5e3c','#efad42','#fff6df','#203b38','#d4bcb0','#629b83','#e98a9d'];
-export default function KoiStudio({onClose,onSave,fish,onRemove,onResize,turtleCount=0,onTurtles}){
+export default function KoiStudio({onClose,onSave,fish,onRemove,onResize,turtleCount=0,onTurtles,reducedMotion}){
  const canvas=useRef(null),paint=useRef(null),drawing=useRef(false),last=useRef(null),history=useRef([]),frame=useRef(0),sizeRef=useRef(1);
  const [color,setColor]=useState(COLORS[0]),[brush,setBrush]=useState(24),[eraser,setEraser]=useState(false),[name,setName]=useState('小欢喜'),[size,setSize]=useState(1),[revision,setRevision]=useState(0),[tab,setTab]=useState('draw');sizeRef.current=size;
  function preview(){if(!frame.current)frame.current=requestAnimationFrame(()=>{frame.current=0;if(canvas.current&&paint.current){const skin=prepareKoiSkin(paint.current,'skin-v2');paintKoiPreview(canvas.current,skin,sizeRef.current)}})}
@@ -25,9 +26,10 @@ export default function KoiStudio({onClose,onSave,fish,onRemove,onResize,turtleC
  function end(){drawing.current=false;last.current=null}
  function undo(){const previous=history.current.pop();if(previous)paint.current.getContext('2d').putImageData(previous,0,0);setRevision(v=>v+1);preview()}
  function changeTab(next){end();setTab(next)}
- return <Panel wide title="画一尾，属于你的锦鲤" subtitle="画下花纹，长出鱼鳞，让它自在游进池塘。" onClose={onClose}>
-  <div className="studio-tabs"><button className={tab==='draw'?'selected':''} onClick={()=>changeTab('draw')}>绘制锦鲤</button><button className={tab==='collection'?'selected':''} onClick={()=>changeTab('collection')}>我的锦鲤 <span>{fish.length}/12</span></button><button className={tab==='turtles'?'selected':''} onClick={()=>changeTab('turtles')}>小乌龟 <span>{turtleCount}/4</span></button></div>
-  {tab==='draw'?<>
+ return <Panel wide title="画一尾，属于你的锦鲤" subtitle="给锦鲤添上花纹，或从空白画布画出自己的鱼。" onClose={onClose}>
+  <div className="studio-tabs"><button className={tab==='draw'?'selected':''} onClick={()=>changeTab('draw')}>绘制锦鲤</button><button className={tab==='freeform'?'selected':''} onClick={()=>changeTab('freeform')}>自由鱼形</button><button className={tab==='collection'?'selected':''} onClick={()=>changeTab('collection')}>我的锦鲤 <span>{fish.length}/12</span></button><button className={tab==='turtles'?'selected':''} onClick={()=>changeTab('turtles')}>小乌龟 <span>{turtleCount}/4</span></button></div>
+  <FreeformStudio visible={tab==='freeform'} onSave={onSave} fishCount={fish.length} colors={COLORS} reducedMotion={reducedMotion}/>
+  {tab==='freeform'?null:tab==='draw'?<>
    <div className="drawing-board anatomical-board"><div className="drawing-watermark">在鱼身上涂画，实时预览入水后的花纹</div><canvas aria-label="锦鲤绘画画布" ref={canvas} width="1280" height="640" onPointerDown={begin} onPointerMove={draw} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end}/><span className="drawing-caption">鱼尾 ←<span>→ 鱼头</span></span></div>
    <div className="drawing-tools"><div className="swatches">{COLORS.map(c=><button aria-label={`颜色 ${c}`} key={c} style={{background:c}} className={color===c&&!eraser?'active':''} onClick={()=>{setColor(c);setEraser(false)}}/>)}<label className="custom-color" title="自选颜色"><input aria-label="自选画笔颜色" type="color" value={color} onChange={e=>{setColor(e.target.value);setEraser(false)}}/></label></div><div className="tool-group"><button className={`icon-button ${eraser?'active':''}`} aria-label={eraser?'使用画笔':'使用橡皮'} onClick={()=>setEraser(!eraser)}>{eraser?<Eraser size={18}/>:<Paintbrush size={18}/>}</button><button className="icon-button" aria-label="撤销一笔" disabled={!history.current.length} onClick={undo}><Undo2 size={18}/></button><button className="icon-button" aria-label="重新绘制" onClick={init}><RotateCcw size={17}/></button></div></div>
    <div className="studio-sliders"><label className="brush-control">笔触大小<input aria-label="笔触大小" type="range" min="5" max="65" value={brush} onChange={e=>setBrush(Number(e.target.value))}/><span>{brush}</span></label><label className="brush-control">锦鲤大小<input aria-label="新锦鲤大小" type="range" min="0.55" max="1.8" step="0.05" value={size} onChange={e=>setSize(Number(e.target.value))}/><span>{Math.round(size*100)}%</span></label></div>

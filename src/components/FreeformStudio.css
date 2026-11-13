@@ -1,0 +1,22 @@
+.freeform-toolbar, .freeform-toolbar > div, .freeform-toolbar button, .freeform-note, .freeform-note > span:last-child {
+  display: flex;
+  align-items: center;
+}
+.freeform-toolbar { justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.freeform-toolbar > div { gap: 2px; flex-wrap: wrap; }
+.freeform-toolbar button { gap: 5px; padding: 7px 9px; border-radius: 7px; font-size: 12px; color: var(--muted); }
+.freeform-toolbar button[aria-pressed="true"] { color: #f2f5d8; background: #d6edbd24; }
+.freeform-toolbar > button { border: 1px solid var(--line); color: var(--accent); }
+.freeform-board.drawing-board { padding: 0; background: radial-gradient(ellipse at 46% 38%, #386e60, #1c4c43); }
+.freeform-board.drawing-board canvas { width: 100%; aspect-ratio: 2; max-width: none; cursor: crosshair; filter: none; }
+.freeform-board.drawing-board canvas[hidden] { display: none; }
+.freeform-board .freeform-prompt, .freeform-gesture { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.freeform-prompt { display: grid; align-content: center; justify-items: center; gap: 9px; color: #c3d9c7; font: 15px var(--serif); }
+.freeform-gesture { color: #f5e4ad; }
+.freeform-note { justify-content: space-between; gap: 12px; font-size: 11px; line-height: 1.65; margin-top: 8px; color: var(--muted); }
+.freeform-note > span:last-child { white-space: nowrap; gap: 5px; }
+@media (max-width: 560px) {
+  .freeform-toolbar button { padding: 7px 5px; font-size: 11px; }
+  .freeform-studio .drawing-tools { flex-wrap: wrap; }
+  .studio-tabs:has(+ .freeform-studio) { gap: 12px; flex-wrap: wrap; }
+}

@@ -254,8 +254,11 @@ export class PondSimulation {
       this.moveAnimal(fish, dt);
       updateSwimMotion(fish, dt, this.time, reducedMotion);
       const bodyScale = clamp(Math.min(this.width / 1250, this.height / 780), .78, 1.15);
-      const mouthX = fish.x + Math.cos(fish.heading) * fish.length * .385 * bodyScale;
-      const mouthY = fish.y + Math.sin(fish.heading) * fish.length * .385 * bodyScale;
+      const forward = (fish.drawnMouth?.x ?? .385) * fish.length * bodyScale;
+      const lateral = (fish.drawnMouth?.y ?? 0) * fish.length * bodyScale;
+      const cos = Math.cos(fish.heading), sin = Math.sin(fish.heading);
+      const mouthX = fish.x + cos * forward - sin * lateral;
+      const mouthY = fish.y + sin * forward + cos * lateral;
       for (let i = this.food.length - 1; i >= 0; i--) {
         const pellet = this.food[i];
         if (Math.hypot(pellet.x - mouthX, pellet.y - mouthY) < 13) {

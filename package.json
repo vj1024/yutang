@@ -12,6 +12,7 @@
     "test": "node --test tests/*.test.js",
     "desktop": "pnpm build && pnpm build:native && electron .",
     "package:mac": "pnpm build && pnpm build:native && electron-builder --mac dir --arm64",
+    "package:win": "node scripts/package-windows.mjs",
     "build:native": "node electron/build-native.cjs",
     "test:desktop": "node --test electron/policy.test.cjs",
     "test:performance": "node electron/performance-smoke.cjs --matrix",
@@ -22,6 +23,7 @@
     "test:wind": "node electron/wind-playback-1.5.cjs",
     "test:polish": "node electron/polish-1.7-smoke.cjs",
     "test:studio": "node electron/studio-1.8-smoke.cjs",
+    "test:freeform": "node scripts/test-freeform-fish.mjs",
     "test:sound": "node electron/sound-1.9-smoke.cjs",
     "test:windows": "node electron/window-habitat-1.10-smoke.cjs",
     "test:swim": "node electron/swim-1.11-smoke.cjs",
@@ -64,19 +66,21 @@
       "category": "public.app-category.entertainment",
       "target": "dir",
       "identity": "-",
-      "notarize": false
+      "notarize": false,
+      "extraResources": [
+        {
+          "from": "electron/native/bin",
+          "to": "native",
+          "filter": ["pond-window.node", "pond-pointer"]
+        }
+      ]
     },
-    "asar": true,
-    "extraResources": [
-      {
-        "from": "electron/native/bin",
-        "to": "native",
-        "filter": [
-          "pond-window.node",
-          "pond-pointer"
-        ]
-      }
-    ]
+    "win": {
+      "target": "nsis",
+      "icon": "electron/assets/app-icon.png",
+      "artifactName": "Yutang-Setup-${version}-${arch}.${ext}"
+    },
+    "asar": true
   },
   "author": {
     "name": "赛博老爸",
